@@ -10,16 +10,17 @@
 #include "content\public\renderer\render_thread.h"
 #include "content\public\renderer\render_process_observer.h"
 #include "v8\include\v8.h"
-#include "third_party\WebKit\Source\WebKit\chromium\public\WebView.h"
-#include "third_party\WebKit\Source\WebKit\chromium\public\WebFrame.h"
+
+#include "third_party\WebKit\public\web\WebView.h"
+#include "third_party\WebKit\public\web\WebFrame.h"
 
 #include <vector>
 #include <map>
 
 namespace v8{
 
-Handle<Value> KaminoGetRecentHistory(const Arguments &args){
-	HandleScope handle_scope;	
+void KaminoGetRecentHistory(const FunctionCallbackInfo<v8::Value>& args){
+	HandleScope handle_scope(args.GetIsolate());	
 	std::vector<std::wstring> tittels;
 	std::vector<std::string> urls;
 	content::KaminoContentRenderClient *client = reinterpret_cast<content::KaminoContentRenderClient *>(v8::External::Cast(*args.Data())->Value());
@@ -27,54 +28,53 @@ Handle<Value> KaminoGetRecentHistory(const Arguments &args){
 	view->Send(new KaminoMsg_GetRecentHistoryTittles(view->GetRoutingID(), &tittels));
 	view->Send(new KaminoMsg_GetRecentHistoryURLs(view->GetRoutingID(), &urls));
 	Local<Array> history = Array::New(tittels.size() * 2);
-	if(tittels.size() != urls.size())
-		return Undefined();
+	if(tittels.size() != urls.size()){
+		args.GetReturnValue().Set(Undefined());
+		return;
+	}
 	for(unsigned int i = 0, j = 0; i < tittels.size(); i++, j++){
 		history->Set(j, String::New((uint16_t *)tittels[i].c_str()));
 		history->Set(++j, String::New(urls[i].c_str()));
 	}
-	return handle_scope.Close(history);	
+	args.GetReturnValue().Set(history);
 }
 
-Handle<Value> KaminoSetSymLink(const Arguments &args){
-	HandleScope handle_scope;
+void KaminoSetSymLink(const FunctionCallbackInfo<v8::Value>& args){
+	HandleScope handle_scope(args.GetIsolate());
 	String::Utf8Value key(args[0]);
 	String::Utf8Value link(args[1]);
 	content::KaminoContentRenderClient *client = reinterpret_cast<content::KaminoContentRenderClient *>(v8::External::Cast(*args.Data())->Value());
 	content::RenderView *view = client->GetRenderViewForFrame(WebKit::WebFrame::frameForCurrentContext()->top());
 	if(view != NULL)
 		view->Send(new KaminoMsg_NewSymLink(view->GetRoutingID(), std::string(*key), std::string(*link)));
-	return Undefined();
 }
 
-Handle<Value> KaminoLOG(const Arguments &args){
-	HandleScope handle_scope;	
+void KaminoLOG(const FunctionCallbackInfo<v8::Value>& args){
+	HandleScope handle_scope(args.GetIsolate());
 	String::Utf8Value msg(args[0]);
 	content::KaminoContentRenderClient *client = reinterpret_cast<content::KaminoContentRenderClient *>(v8::External::Cast(*args.Data())->Value());
 	content::RenderView *view = client->GetRenderViewForFrame(WebKit::WebFrame::frameForCurrentContext()->top());
 	if(view != NULL)
 		view->Send(new KaminoMsg_LOG(view->GetRoutingID(), std::string(*msg)));
-	return Undefined();	
 };
 
-Handle<Value> KaminoILike(const Arguments &args){
-	HandleScope handle_scope;	
+void KaminoILike(const FunctionCallbackInfo<v8::Value>& args){
+	HandleScope handle_scope(args.GetIsolate());	
 	String::Utf8Value msg(args[0]);
 	content::KaminoContentRenderClient *client = reinterpret_cast<content::KaminoContentRenderClient *>(v8::External::Cast(*args.Data())->Value());
 	content::RenderView *view = client->GetRenderViewForFrame(WebKit::WebFrame::frameForCurrentContext()->top());
 	if(view != NULL)
 		view->Send(new KaminoMsg_ILIKE(view->GetRoutingID(), std::string(*msg)));
-	return Undefined();	
 };
 
-Handle<Value> KaminoShouldShowIcons(const Arguments &args){
-	HandleScope handle_scope;
+void KaminoShouldShowIcons(const FunctionCallbackInfo<v8::Value>& args){
+	HandleScope handle_scope(args.GetIsolate());
 	content::KaminoContentRenderClient *client = reinterpret_cast<content::KaminoContentRenderClient *>(v8::External::Cast(*args.Data())->Value());
 	content::RenderView *view = client->GetRenderViewForFrame(WebKit::WebFrame::frameForCurrentContext()->top());
 	bool should_show_icons = false;
 	if(view != NULL)
 		view->Send(new KaminoMsg_ShouldShowIcons(view->GetRoutingID(), args[0]->BooleanValue(), &should_show_icons));
-	return Boolean::New(should_show_icons);
+	args.GetReturnValue().Set(Boolean::New(should_show_icons));
 }
 
 class AwesomeKaminoJSExtensioAPI: public Extension{
@@ -83,20 +83,21 @@ public:
 		:Extension(name, js_code){
 			client_ = client;
 	}
+
 	virtual Handle<FunctionTemplate> GetNativeFunction(Handle<v8::String> name) OVERRIDE{
-		HandleScope handle_scope;
 		if(name->Equals(String::New("KaminoLOG")))
-			return handle_scope.Close(FunctionTemplate::New(KaminoLOG, External::New(client_)));
+			return FunctionTemplate::New(KaminoLOG, External::New(client_));
 		if(name->Equals(String::New("KaminoILike")))
-			return handle_scope.Close(FunctionTemplate::New(KaminoILike, External::New(client_)));
+			return FunctionTemplate::New(KaminoILike, External::New(client_));
 		if(name->Equals(String::New("KaminoGetRecentHistory")))
-			return handle_scope.Close(FunctionTemplate::New(KaminoGetRecentHistory, External::New(client_)));
+			return FunctionTemplate::New(KaminoGetRecentHistory, External::New(client_));
 		if(name->Equals(String::New("KaminoShouldShowIcons")))
-			return handle_scope.Close(FunctionTemplate::New(KaminoShouldShowIcons, External::New(client_)));
+			return FunctionTemplate::New(KaminoShouldShowIcons, External::New(client_));
 		if(name->Equals(String::New("KaminoSetSymLink")))
-			return handle_scope.Close(FunctionTemplate::New(KaminoSetSymLink, External::New(client_)));
-		return handle_scope.Close(FunctionTemplate::New());
+			return FunctionTemplate::New(KaminoSetSymLink, External::New(client_));
+		return FunctionTemplate::New();
 	}
+
 private:
 	content::KaminoContentRenderClient *client_;
 };

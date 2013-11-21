@@ -4,8 +4,8 @@
 
 #include "KaminoDownloadManagerDelegate.h"
 #include "base\bind.h"
-#include "base\string_util.h"
-#include "base\file_path.h"
+#include "base\strings\string_util.h"
+#include "base\files\file_path.h"
 #include "base\file_util.h"
 #include "base\path_service.h"
 #include "content\public\browser\browser_thread.h"
@@ -137,7 +137,7 @@ namespace content{
 				}
 				return 0;
 			case WM_CLOSE:
-				if((myself->download_item != NULL) && (myself->download_item->IsInProgress()))
+				if((myself->download_item != NULL) && (!myself->download_item->IsDone()))
 					myself->download_item->Cancel(true);
 				DestroyWindow(hWnd);
 				return 0;
@@ -166,7 +166,7 @@ namespace content{
 			callback.Run(download->GetForcedFilePath(), DownloadItem::TARGET_DISPOSITION_OVERWRITE,DOWNLOAD_DANGER_TYPE_NOT_DANGEROUS, download->GetForcedFilePath());
 			return true;
 		}
-		FilePath generated_name = net::GenerateFileName(download->GetURL(), download->GetContentDisposition(), EmptyString(), download->GetSuggestedFilename(),
+		base::FilePath generated_name = net::GenerateFileName(download->GetURL(), download->GetContentDisposition(), EmptyString(), download->GetSuggestedFilename(),
 			download->GetMimeType(), "download");
 		BrowserThread::PostTask(BrowserThread::FILE, FROM_HERE, 
 								base::Bind(&KaminoDownloadManagerDelegate::GenerateFilename, 
@@ -175,17 +175,17 @@ namespace content{
 		return true;
 	}
 
-	void KaminoDownloadManagerDelegate::GenerateFilename(int32 download_id, const DownloadTargetCallback& callback, const FilePath& generated_name,
-			const FilePath& suggested_directory) {
+	void KaminoDownloadManagerDelegate::GenerateFilename(int32 download_id, const DownloadTargetCallback& callback, const base::FilePath& generated_name,
+			const base::FilePath& suggested_directory) {
 		DCHECK(BrowserThread::CurrentlyOn(BrowserThread::FILE));
-		if (!file_util::PathExists(suggested_directory))
+		if (!base::PathExists(suggested_directory))
 			file_util::CreateDirectory(suggested_directory);
-		FilePath suggested_path(suggested_directory.Append(generated_name));
+		base::FilePath suggested_path(suggested_directory.Append(generated_name));
 		BrowserThread::PostTask(BrowserThread::UI, FROM_HERE, base::Bind(&KaminoDownloadManagerDelegate::OnDownloadPathGenerated,
 								this, download_id, callback, suggested_path));
 	}
 
-	void KaminoDownloadManagerDelegate::OnDownloadPathGenerated(int32 download_id, const DownloadTargetCallback& callback, const FilePath& suggested_path) {
+	void KaminoDownloadManagerDelegate::OnDownloadPathGenerated(int32 download_id, const DownloadTargetCallback& callback, const base::FilePath& suggested_path) {
 		DCHECK(BrowserThread::CurrentlyOn(BrowserThread::UI));
 		wprintf(L"\nDownloading to Path > %s", suggested_path.value());
 		callback.Run(suggested_path, DownloadItem::TARGET_DISPOSITION_PROMPT, DOWNLOAD_DANGER_TYPE_NOT_DANGEROUS, suggested_path.AddExtension(L"crdownload"));		

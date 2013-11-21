@@ -5,11 +5,16 @@
 #ifndef KAMINO_AFTER_SETUP_SYSTEM_INIT_H
 #define KAMINO_AFTER_SETUP_SYSTEM_INIT_H
 
+#include "KaminoBrowserMainParts.h"
+
+class content::KaminoBrowserMainParts;
 class KaminoAfterSetupSystemInit{
 public:
-	KaminoAfterSetupSystemInit();
+	KaminoAfterSetupSystemInit(content::KaminoBrowserMainParts *main);
 	~KaminoAfterSetupSystemInit();
 	void Start();
+	void CallBackLooperTillEnd();
+	content::KaminoBrowserMainParts *main_owner;
 };
 
 

@@ -7,7 +7,7 @@
 #include "UIMain.h"
 #include <window.h>
 #include "content\public\browser\render_view_host.h"
-#include "third_party\WebKit\Source\WebKit\chromium\public\WebFindOptions.h"
+#include "third_party\WebKit\public\web\WebFindOptions.h"
 
 namespace{
 	WNDPROC basic_edit_proc = NULL;

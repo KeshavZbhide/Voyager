@@ -9,7 +9,7 @@
 #include "UIMain.h"
 #include "KTab.h"
 #include "resource.h"
-#include "base\file_path.h"
+#include "base\files\file_path.h"
 #include "base\path_service.h"
 #include "base\bind.h"
 #include "content\public\browser\browser_thread.h"
@@ -52,7 +52,7 @@ BasicUIMain::BasicUIMain(){
 		return;
 	}
 	//tab_manager = NULL;
-	tab_manager = new KTabManager();
+	tab_manager = new KTabManager(this);
 }
 
 BasicUIMain::~BasicUIMain(){
@@ -62,7 +62,7 @@ BasicUIMain::~BasicUIMain(){
 }
 
 void BasicUIMain::main(){
-	CreateWindowEx(WS_EX_APPWINDOW | WS_EX_WINDOWEDGE, wnd_cls.lpszClassName, L"KaminoBrowser", WS_OVERLAPPEDWINDOW, 0,0,0,0, NULL, NULL, wnd_cls.hInstance, this);
+	CreateWindowEx(WS_EX_APPWINDOW | WS_EX_WINDOWEDGE, wnd_cls.lpszClassName, L"KaminoBrowser", WS_POPUP, 0,0,0,0, NULL, NULL, wnd_cls.hInstance, this);
 	MoveWindow(main_window, KaminoGlobal::g_ideal_rect.left, 
 		KaminoGlobal::g_ideal_rect.top, KaminoGlobal::g_ideal_rect.right, KaminoGlobal::g_ideal_rect.bottom, TRUE);
 	if(main_window == NULL)

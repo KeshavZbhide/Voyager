@@ -47,9 +47,9 @@ public:
 	~KaminoDownloadManagerDelegate(void);
 	virtual void Shutdown() OVERRIDE;
 	virtual bool DetermineDownloadTarget(DownloadItem* download, const DownloadTargetCallback& callback) OVERRIDE;
-	void GenerateFilename(int32 download_id, const DownloadTargetCallback& callback, const FilePath& generated_name, const FilePath& suggested_directory);
-	void OnDownloadPathGenerated(int32 download_id, const DownloadTargetCallback& callback, const FilePath& suggested_path);
-	FilePath default_download_path_;
+	void GenerateFilename(int32 download_id, const DownloadTargetCallback& callback, const base::FilePath& generated_name, const base::FilePath& suggested_directory);
+	void OnDownloadPathGenerated(int32 download_id, const DownloadTargetCallback& callback, const base::FilePath& suggested_path);
+	base::FilePath default_download_path_;
 	DownloadManager *download_manager;
 	DISALLOW_COPY_AND_ASSIGN(KaminoDownloadManagerDelegate);
 };

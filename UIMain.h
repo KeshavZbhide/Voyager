@@ -24,6 +24,7 @@ void ui_log(int funcEntryOrExit, char *format, ...);
 #endif
 
 
+#include "KaminoBrowserContext.h"
 
 //Main Embeder Class To build UI.
 class UIMain{
@@ -31,6 +32,9 @@ public:
 	UIMain() { };
 	virtual ~UIMain() { };
 	virtual void main() { };
+	content::KaminoBrowserContext *GetBrowserContext(){return browser_context_;}
+	void SetBrowserContext(content::KaminoBrowserContext *context) { browser_context_ = context;}
+	content::KaminoBrowserContext *browser_context_;
 };
 
 UIMain* GetUIMain();
@@ -41,7 +45,7 @@ class BasicUIMain : public UIMain{
 public:
 	BasicUIMain();
 	~BasicUIMain();
-	void main() override;	
+	void main() override;		
 	static LRESULT CALLBACK BasicWndProc(HWND, UINT, WPARAM, LPARAM);
 	KTabManager* tab_manager;
 	HWND main_window;
