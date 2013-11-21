@@ -145,8 +145,10 @@ bool KMinMaxCloseButton::IfClicked(int x){
 					KaminoGlobal::g_ideal_rect.right, KaminoGlobal::g_ideal_rect.bottom, FALSE);
 				ShowWindow(manager->core_parent, SW_RESTORE);
 			}
-			else
+			else{
 				ShowWindow(manager->core_parent, SW_MAXIMIZE);
+				KaminoGlobal::g_is_window_fullscreen = true;
+			}
 			return true;
 		case HoveringOverClose:
 			manager->CloseAllTabs();

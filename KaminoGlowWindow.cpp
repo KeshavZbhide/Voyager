@@ -94,10 +94,10 @@ KaminoGlowWindow::~KaminoGlowWindow(){
 }
 
 void KaminoGlowWindow::Update(int x, int y, int cx, int cy){
-	SetWindowPos(win_right, NULL, x+cx, y-4, 10, cy+8, SWP_NOACTIVATE);	
-	SetWindowPos(win_left, NULL, x - 10, y-4, 10, cy+8, SWP_NOACTIVATE);
-	SetWindowPos(win_top, NULL, x, y-10, cx, 10, SWP_NOACTIVATE); 
-	SetWindowPos(win_bottom, NULL, x, y+cy, cx, 10, SWP_NOACTIVATE);
+	SetWindowPos(win_right, NULL, x+cx, y-2, 5, cy+4, SWP_NOACTIVATE);	
+	SetWindowPos(win_left, NULL, x - 5, y-2, 5, cy+4, SWP_NOACTIVATE);
+	SetWindowPos(win_top, NULL, x, y-5, cx, 5, SWP_NOACTIVATE); 
+	SetWindowPos(win_bottom, NULL, x, y+cy, cx, 5, SWP_NOACTIVATE);
 }
 
 void KaminoGlowWindow::BuildAllBitmaps(){
@@ -120,11 +120,11 @@ void KaminoGlowWindow::BuildAllBitmaps(){
 	blend.BlendOp = AC_SRC_OVER;
 	blend.SourceConstantAlpha = 255;
 	D2D1_GRADIENT_STOP stops[3];
-	stops[0].color = D2D1::ColorF(0.0f, 0.0f, 0.0f, 0.0f);
+	stops[0].color = D2D1::ColorF(1.0f, 1.0f, 1.0f, 0.0f);
 	stops[0].position = 0.0f;
-	stops[1].color = D2D1::ColorF(0.0f, 0.0f, 0.0f, 0.1f);
+	stops[1].color = D2D1::ColorF(1.0f, 1.0f, 1.0f, 0.1f);
 	stops[1].position = 0.5f;
-	stops[2].color = D2D1::ColorF(0.145f, 0.145f, 0.145f, 0.5f);
+	stops[2].color = D2D1::ColorF(1.145f, 1.145f, 1.145f, 0.7f);
 	stops[2].position = 1.0f;
 	p1.x = 0;
 	p1.y = 0;	
@@ -136,66 +136,66 @@ void KaminoGlowWindow::BuildAllBitmaps(){
 	target->CreateGradientStopCollection(stops, 3, &gradient_stops);
 
 	//Building win_left Bitmap ....
-    bitmap_info.bmiHeader.biWidth = 10;
+    bitmap_info.bmiHeader.biWidth = 5;
 	bitmap_info.bmiHeader.biHeight = 0 - KaminoGlobal::g_screen_height;
 	win_left_bitmap = CreateDIBSection(0, &bitmap_info, DIB_RGB_COLORS, &bits_holder, NULL, NULL);
-	sz.cx = 10;
+	sz.cx = 5;
 	sz.cy = KaminoGlobal::g_screen_height;
 	rc.top = 0;
 	rc.bottom = KaminoGlobal::g_screen_height;
 	rc.left = 0;
-	rc.right = 10;
+	rc.right = 5;
 	HDC bitmap_dc = CreateCompatibleDC(GetDC(NULL));
 	HBITMAP old = (HBITMAP)SelectObject(bitmap_dc, win_left_bitmap);
 	target->BindDC(bitmap_dc, &rc);
-	target->CreateLinearGradientBrush(D2D1::LinearGradientBrushProperties(D2D1::Point2F(0.0f, 0.0f), D2D1::Point2F(10.0f, 0.0f)), gradient_stops, &brush);
+	target->CreateLinearGradientBrush(D2D1::LinearGradientBrushProperties(D2D1::Point2F(0.0f, 0.0f), D2D1::Point2F(5.0f, 0.0f)), gradient_stops, &brush);
 	target->BeginDraw();
 	target->Clear(D2D1::ColorF(0.0f, 0.0f, 0.0f, 0.0f));
-	target->FillRectangle(D2D1::RectF(0.0f, 0.0f, 10.0f, static_cast<FLOAT>(KaminoGlobal::g_screen_height)), brush);
+	target->FillRectangle(D2D1::RectF(0.0f, 0.0f, 5.0f, static_cast<FLOAT>(KaminoGlobal::g_screen_height)), brush);
 	target->EndDraw();		
 	UpdateLayeredWindow(win_left, NULL, &p1, &sz, bitmap_dc, &p1, 0, &blend, ULW_ALPHA); 		
 	SelectObject(bitmap_dc, old);
 	
 	//Build win_right bitmap ....
-    bitmap_info.bmiHeader.biWidth = 10;
+    bitmap_info.bmiHeader.biWidth = 5;
 	bitmap_info.bmiHeader.biHeight = 0 - KaminoGlobal::g_screen_height;
 	win_right_bitmap = CreateDIBSection(0, &bitmap_info, DIB_RGB_COLORS, &bits_holder, NULL, NULL);
-	sz.cx = 10;
+	sz.cx = 5;
 	sz.cy = KaminoGlobal::g_screen_height;
 	rc.top = 0;
 	rc.bottom = KaminoGlobal::g_screen_height;
 	rc.left = 0;
-	rc.right = 10;
+	rc.right = 5;
 	old = (HBITMAP)SelectObject(bitmap_dc, win_right_bitmap);
 	target->BindDC(bitmap_dc, &rc);
-	brush->SetStartPoint(D2D1::Point2F(10.0f, 0.0f));
+	brush->SetStartPoint(D2D1::Point2F(5.0f, 0.0f));
 	brush->SetEndPoint(D2D1::Point2F(0.0f, 0.0f));
 	//target->CreateLinearGradientBrush(D2D1::LinearGradientBrushProperties(D2D1::Point2F(10.0f, 0.0f), D2D1::Point2F(0.0f, 0.0f)), gradient_stops, &brush);		
 	target->BeginDraw();
 	target->Clear(D2D1::ColorF(0.0f, 0.0f, 0.0f, 0.0f));
-	target->FillRectangle(D2D1::RectF(0.0f, 0.0f, 10.0f, static_cast<FLOAT>(KaminoGlobal::g_screen_height)), brush);
+	target->FillRectangle(D2D1::RectF(0.0f, 0.0f, 5.0f, static_cast<FLOAT>(KaminoGlobal::g_screen_height)), brush);
 	target->EndDraw();		
 	UpdateLayeredWindow(win_right, NULL, &p1, &sz, bitmap_dc, &p1, 0, &blend, ULW_ALPHA); 		
 	SelectObject(bitmap_dc, old);
 	
 	//Build win_top bitmap ....
 	bitmap_info.bmiHeader.biWidth = KaminoGlobal::g_screen_width;
-	bitmap_info.bmiHeader.biHeight = 0 - 10;
+	bitmap_info.bmiHeader.biHeight = 0 - 5;
 	win_top_bitmap = CreateDIBSection(0,&bitmap_info, DIB_RGB_COLORS, &bits_holder, NULL, NULL);
 	sz.cx = KaminoGlobal::g_screen_width;
-	sz.cy = 10;
+	sz.cy = 5;
 	rc.top = 0;
 	rc.right = KaminoGlobal::g_screen_width;
 	rc.left = 0;
-	rc.bottom = 10;
+	rc.bottom = 5;
 	old = (HBITMAP)SelectObject(bitmap_dc, win_top_bitmap);
 	target->BindDC(bitmap_dc, &rc);
 	brush->SetStartPoint(D2D1::Point2F(0.0f, 0.0f));
-	brush->SetEndPoint(D2D1::Point2F(0.0f, 10.0f));
+	brush->SetEndPoint(D2D1::Point2F(0.0f, 5.0f));
 	//target->CreateLinearGradientBrush(D2D1::LinearGradientBrushProperties(D2D1::Point2F(0.0f, 0.0f), D2D1::Point2F(0.0f, 10.0f)), gradient_stops, &brush);		
 	target->BeginDraw();
 	target->Clear(D2D1::ColorF(0.0f, 0.0f, 0.0f, 0.0f));
-	target->FillRectangle(D2D1::RectF(0.0f, 0.0f, static_cast<FLOAT>(KaminoGlobal::g_screen_width), 10.0f), brush);
+	target->FillRectangle(D2D1::RectF(0.0f, 0.0f, static_cast<FLOAT>(KaminoGlobal::g_screen_width), 5.0f), brush);
 	target->EndDraw();		
 	UpdateLayeredWindow(win_top, NULL, &p1, &sz, bitmap_dc, &p1, 0, &blend, ULW_ALPHA); 		
 	SelectObject(bitmap_dc, old);
@@ -203,22 +203,22 @@ void KaminoGlowWindow::BuildAllBitmaps(){
 
 	//Build win_bottom bitmap ....
 	bitmap_info.bmiHeader.biWidth = KaminoGlobal::g_screen_width;
-	bitmap_info.bmiHeader.biHeight = 0 - 10;
+	bitmap_info.bmiHeader.biHeight = 0 - 5;
 	win_bottom_bitmap = CreateDIBSection(0,&bitmap_info, DIB_RGB_COLORS, &bits_holder, NULL, NULL);
 	sz.cx = KaminoGlobal::g_screen_width;
-	sz.cy = 10;
+	sz.cy = 5;
 	rc.top = 0;
 	rc.right = KaminoGlobal::g_screen_width;
 	rc.left = 0;
-	rc.bottom = 10;
+	rc.bottom = 5;
 	old = (HBITMAP)SelectObject(bitmap_dc, win_bottom_bitmap);
 	target->BindDC(bitmap_dc, &rc);
-	brush->SetStartPoint(D2D1::Point2F(0.0f, 10.0f));
+	brush->SetStartPoint(D2D1::Point2F(0.0f, 5.0f));
 	brush->SetEndPoint(D2D1::Point2F(0.0f, 0.0f));
 	//target->CreateLinearGradientBrush(D2D1::LinearGradientBrushProperties(D2D1::Point2F(0.0f, 10.0f), D2D1::Point2F(0.0f, 0.0f)), gradient_stops, &brush);		
 	target->BeginDraw();
 	target->Clear(D2D1::ColorF(0.0f, 0.0f, 0.0f, 0.0f));
-	target->FillRectangle(D2D1::RectF(0.0f, 0.0f, static_cast<FLOAT>(KaminoGlobal::g_screen_width), 10.0f), brush);
+	target->FillRectangle(D2D1::RectF(0.0f, 0.0f, static_cast<FLOAT>(KaminoGlobal::g_screen_width), 5.0f), brush);
 	target->EndDraw();		
 	UpdateLayeredWindow(win_bottom, NULL, &p1, &sz, bitmap_dc, &p1, 0, &blend, ULW_ALPHA); 		
 	SelectObject(bitmap_dc, old);

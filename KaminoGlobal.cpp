@@ -175,7 +175,7 @@ bool Initialize(wchar_t *cmd){
 		g_is_test_run = CheckSwitch(cmd, L"-test_run", len, wcslen(L"-test_run"));
 		//Check if Init Process ...
 		g_is_init_process = CheckSwitch(cmd, L"-system_init", len, wcslen(L"-system_init"));
-		//Check if we need to make a facebook post
+		//Check if we need to make a facebook post ...
 		g_is_facebook_post_process = CheckSwitch(cmd, L"-facebook_post", len, wcslen(L"-facebook_post"));
 	}
 	//GetModuleName
@@ -183,7 +183,7 @@ bool Initialize(wchar_t *cmd){
 	GetModuleFileName(GetModuleHandle(NULL), g_executable_name, MAX_PATH);
 	g_current_version = NULL;
 	std::string current_version;	
-	if(file_util::ReadFileToString(FilePath(L"../current_version.txt"), &current_version)){
+	if(base::ReadFileToString(base::FilePath(L"../current_version.txt"), &current_version)){
 		g_current_version = (char *)malloc(current_version.length()+2);
 		ZeroMemory(g_current_version, current_version.length()+2);
 		current_version.copy(g_current_version, current_version.length(), 0);

@@ -4,7 +4,7 @@
 
 #include "KaminoUpdateProcess.h"
 #include "base\file_util.h"
-#include "base\file_path.h"
+#include "base\files\file_path.h"
 #include "base\win\shortcut.h"
 
 #include "UIMain.h"
@@ -12,11 +12,10 @@
 #include "content\public\browser\browser_thread.h"
 #include "third_party\libxml\chromium\libxml_utils.h"
 
-
 #include <windows.h>
 
 namespace KaminoUpdate{
-void RecivedResourceFile(FilePath path);
+void RecivedResourceFile(base::FilePath path);
 void LastStepOfExecution(bool set_shortcut, std::string &shortcut, bool set_version, std::string &ver);
 
 std::wstring s2ws(const std::string& s)
@@ -44,10 +43,10 @@ class KaminoUpdateProcessUrlFetcher : public net::URLFetcherDelegate{
 public:	
 	net::URLFetcher *fetcher;
 	std::string source_url;
-	FilePath response_file_path;
+	base::FilePath response_file_path;
 	bool is_file;
 	base::Callback<void(std::string)> exec_for_raw_response;
-	base::Callback<void(FilePath)> exec_for_file;
+	base::Callback<void(base::FilePath)> exec_for_file;
 	static net::URLRequestContextGetter *backup_url_request_getter;
 	static std::vector<KaminoUpdateProcessUrlFetcher *> *all_fetches;
 
@@ -77,39 +76,39 @@ public:
 		fetcher->Start();
 	}
 	
-	void Execute(base::Callback<void(FilePath)> callback, std::string &file_path){
+	void Execute(base::Callback<void(base::FilePath)> callback, std::string &file_path){
 		all_fetches->push_back(this);
 		is_file = true;
 		exec_for_file = callback;
-		response_file_path = FilePath(s2ws(file_path));
-		if(!file_util::PathExists(response_file_path.DirName())){
+		response_file_path = base::FilePath(s2ws(file_path));
+		if(!base::PathExists(response_file_path.DirName())){
 			file_util::CreateDirectory(response_file_path.DirName());
 		}
-		if(file_util::PathExists(response_file_path)){			
+		if(base::PathExists(response_file_path)){			
 			/*Build A new Path that has .temp extension attached...*/
 			//printf("\nPathExisits hence modifying Extension");
 			response_file_path = response_file_path.AddExtension(L".temp");
 			//wprintf(L"\n New FilePath str is %s", response_file_path.value().c_str());
 		}
-		fetcher->SaveResponseToFileAtPath(response_file_path, MessageLoop::current()->message_loop_proxy());
+		fetcher->SaveResponseToFileAtPath(response_file_path, base::MessageLoop::current()->message_loop_proxy());
 		fetcher->Start();
 	}
 
 	//This Method Does Not records to all_fetches...
-	void ExecuteWithoutRecording(base::Callback<void(FilePath)> callback, std::string &file_path){
+	void ExecuteWithoutRecording(base::Callback<void(base::FilePath)> callback, std::string &file_path){
 		is_file = true;
 		exec_for_file = callback;
-		response_file_path = FilePath(s2ws(file_path));
-		if(!file_util::PathExists(response_file_path.DirName())){
+		response_file_path = base::FilePath(s2ws(file_path));
+		if(!base::PathExists(response_file_path.DirName())){
 			file_util::CreateDirectory(response_file_path.DirName());
 		}
-		if(file_util::PathExists(response_file_path)){			
+		if(base::PathExists(response_file_path)){			
 			/*Build A new Path that has .temp extension attached...*/
 			//printf("\nPathExisits hence modifying Extension");
 			response_file_path = response_file_path.AddExtension(L".temp");
 			//wprintf(L"\n New FilePath str is %s", response_file_path.value().c_str());
 		}
-		fetcher->SaveResponseToFileAtPath(response_file_path, MessageLoop::current()->message_loop_proxy());
+		fetcher->SaveResponseToFileAtPath(response_file_path, base::MessageLoop::current()->message_loop_proxy());
 		fetcher->Start();
 	}
 	
@@ -119,7 +118,7 @@ public:
 			return;
 		}
 		if(is_file){
-			FilePath path;
+			base::FilePath path;
 			fetcher->GetResponseAsFilePath(true, &path);
 			exec_for_file.Run(path);
 			for(std::vector<KaminoUpdateProcessUrlFetcher *>::iterator it = all_fetches->begin(); it != all_fetches->end(); it++){
@@ -147,6 +146,7 @@ public:
 	virtual bool ShouldSendDownloadData() OVERRIDE { return false;}
 	virtual void OnURLFetchUploadProgress(const net::URLFetcher* source, int64 current, int64 total) OVERRIDE { }
 };
+
 std::vector<KaminoUpdateProcessUrlFetcher *> * KaminoUpdateProcessUrlFetcher::all_fetches = NULL;
 net::URLRequestContextGetter *KaminoUpdateProcessUrlFetcher::backup_url_request_getter = NULL;
 
@@ -179,7 +179,8 @@ void LastStepOfExecution(bool set_shortcut, std::string &shortcut, bool set_vers
 
 
 
-KaminoUpdateProcess::KaminoUpdateProcess(){
+KaminoUpdateProcess::KaminoUpdateProcess(content::KaminoBrowserMainParts *main_parts){
+	main_owner = main_parts;
 	wnd_cls.cbClsExtra = 0;
 	wnd_cls.cbSize = sizeof(WNDCLASSEX);
 	wnd_cls.cbWndExtra = 0;
@@ -199,18 +200,19 @@ KaminoUpdateProcess::~KaminoUpdateProcess(){
 	DestroyWindow(hWnd);
 }
 
-void KaminoUpdateProcess::BringFile(std::string &file, std::string &url, base::Callback<void(FilePath)> callback){
+void KaminoUpdateProcess::BringFile(std::string &file, std::string &url, base::Callback<void(base::FilePath)> callback){
 	KaminoUpdateProcessUrlFetcher *fetcher = new KaminoUpdateProcessUrlFetcher(url_request_context_getter, url);
 	fetcher->Execute(callback, file);
 }
 
-void RecivedResourceFile(FilePath path){
+void RecivedResourceFile(base::FilePath path){
 	//wprintf(L"\nRecived Resource File %s", path.value().c_str());
 	if(path.Extension().compare(L".temp") == 0){
-		FilePath new_path = path.RemoveExtension();
-		file_util::Delete(new_path, false);
+		base::FilePath new_path = path.RemoveExtension();
+		base::DeleteFile(new_path, false);
 		//printf("\nReplacing File");
-		file_util::ReplaceFile(path, new_path);
+		base::PlatformFileError error;
+		base::ReplaceFile(path, new_path, &error);
 	}	
 }
 
@@ -256,7 +258,7 @@ bool KaminoUpdateProcess::ShouldPatchExecutable(std::string &name, std::string &
 }
 
 
-void PatchExecutableCallBack(FilePath path){
+void PatchExecutableCallBack(base::FilePath path){
 	std::wstring new_output_file = path.RemoveExtension().value();
 	//wprintf(L"\nRecived Patch File with Path %s", path.value().c_str());
 	//wprintf(L"\nExecutable Should be %s", new_output_file.c_str());
@@ -313,16 +315,16 @@ void KaminoUpdateProcess::BuildAllShortCuts(std::string &target){
 	DWORD d = MAX_PATH;
 	GetUserName(user_profil_dir, &d);
 	std::wstring user_name = std::wstring(user_profil_dir);
-	FilePath link_target(s2ws(target));	
+	base::FilePath link_target(s2ws(target));	
 	shortcut_props.set_target(link_target);
 	shortcut_props.set_description(L"browser");
 	shortcut_props.set_working_dir(link_target.DirName());
 
 	std::wstring startMenu = std::wstring(L"C:\\Users\\") + 
 		user_name + std::wstring(L"\\AppData\\Roaming\\Microsoft\\Windows\\Start Menu\\Programs");						
-	if(file_util::PathExists(FilePath(startMenu))){
-		FilePath link(startMenu + L"\\Voyjor.lnk");
-		if(file_util::PathExists(link)){
+	if(base::PathExists(base::FilePath(startMenu))){
+		base::FilePath link(startMenu + L"\\Voyjor.lnk");
+		if(base::PathExists(link)){
 			base::win::CreateOrUpdateShortcutLink(link, shortcut_props, base::win::SHORTCUT_UPDATE_EXISTING);
 			//wprintf(L"\nUpdateing New Link %s", link.value().c_str());			
 		}
@@ -333,9 +335,9 @@ void KaminoUpdateProcess::BuildAllShortCuts(std::string &target){
 	}
 	std::wstring pin_to_taskbar = std::wstring(L"C:\\Users\\") +
 		user_name + std::wstring(L"\\AppData\\Roaming\\Microsoft\\Internet Explorer\\Quick Launch\\User Pinned\\TaskBar");	
-	if(file_util::PathExists(FilePath(pin_to_taskbar))){
-		FilePath link(pin_to_taskbar + L"\\Voyjor.lnk");
-		if(file_util::PathExists(link)){
+	if(base::PathExists(base::FilePath(pin_to_taskbar))){
+		base::FilePath link(pin_to_taskbar + L"\\Voyjor.lnk");
+		if(base::PathExists(link)){
 			//wprintf(L"\nUpdated Link With link file [%s]", link.value().c_str());
 			base::win::CreateOrUpdateShortcutLink(link, shortcut_props, base::win::SHORTCUT_UPDATE_EXISTING);
 		}
@@ -344,9 +346,9 @@ void KaminoUpdateProcess::BuildAllShortCuts(std::string &target){
 	}
 	std::wstring pin_to_startmenu = std::wstring(L"C:\\Users\\") +
 		user_name + std::wstring(L"\\AppData\\Roaming\\Microsoft\\Internet Explorer\\Quick Launch\\User Pinned\\StartMenu");	
-	if(file_util::PathExists(FilePath(pin_to_startmenu))){
-		FilePath link(pin_to_startmenu + L"\\Voyjor.lnk");
-		if(file_util::PathExists(link)){
+	if(base::PathExists(base::FilePath(pin_to_startmenu))){
+		base::FilePath link(pin_to_startmenu + L"\\Voyjor.lnk");
+		if(base::PathExists(link)){
 			//wprintf(L"\nUpdated Link With link file [%s]", link.value().c_str());
 			base::win::CreateOrUpdateShortcutLink(link, shortcut_props, base::win::SHORTCUT_UPDATE_EXISTING);		
 		}
@@ -354,9 +356,9 @@ void KaminoUpdateProcess::BuildAllShortCuts(std::string &target){
 			//wprintf(L"\nLink Does Not Exist for path %s", link.value().c_str());
 	}	
 	std::wstring desktop = std::wstring(L"C:\\Users\\") + user_name + std::wstring(L"\\Desktop");
-	if(file_util::PathExists(FilePath(desktop))){
-		FilePath link(desktop + L"\\Voyjor.lnk");
-		if(file_util::PathExists(link)){
+	if(base::PathExists(base::FilePath(desktop))){
+		base::FilePath link(desktop + L"\\Voyjor.lnk");
+		if(base::PathExists(link)){
 			//wprintf(L"\nUpdate Link With link file [%s]", link.value().c_str());
 			base::win::CreateOrUpdateShortcutLink(link, shortcut_props, base::win::SHORTCUT_UPDATE_EXISTING);		
 		}
@@ -367,9 +369,9 @@ void KaminoUpdateProcess::BuildAllShortCuts(std::string &target){
 	}
 	std::wstring quick_launch = std::wstring(L"C:\\Users\\") + 
 		user_name + std::wstring(L"\\AppData\\Roaming\\Microsoft\\Internet Explorer\\Quick Launch");	
-	if(file_util::PathExists(FilePath(quick_launch))){
-		FilePath link(quick_launch + L"\\Voyjor.lnk");
-		if(file_util::PathExists(link)){
+	if(base::PathExists(base::FilePath(quick_launch))){
+		base::FilePath link(quick_launch + L"\\Voyjor.lnk");
+		if(base::PathExists(link)){
 			//wprintf(L"\nUpdate Link With link file [%s]", link.value().c_str());
 			base::win::CreateOrUpdateShortcutLink(link, shortcut_props, base::win::SHORTCUT_UPDATE_EXISTING);		
 		}
@@ -400,7 +402,7 @@ void KaminoUpdateProcess::StartPatchingAndUpdatingBinaryExecutables(std::string 
 				reader.NodeAttribute("name", &dir_name);
 				if(ShouldUnderGoAppUpdateProcedure(dir_name)){	
 					current_directory += "\\" + dir_name;
-					file_util::CreateDirectory(FilePath(s2ws(current_directory)));
+					file_util::CreateDirectory(base::FilePath(s2ws(current_directory)));
 				}
 				else 
 					break;
@@ -445,7 +447,7 @@ void KaminoUpdateProcess::StartPatchingAndUpdatingBinaryExecutables(std::string 
 						std::wstring new_location = s2ws(current_directory + "\\" + attr);
 						std::wstring old_location = s2ws(std::string(dr) + "\\" + attr);
 						//wprintf(L"\nShould Move %s to %s", old_location.c_str(), new_location.c_str());
-						file_util::CopyFileW(FilePath(old_location), FilePath(new_location));
+						base::CopyFileW(base::FilePath(old_location), base::FilePath(new_location));
 					}
 				
 			}
@@ -552,11 +554,10 @@ void KaminoUpdateProcess::Start(){
 		AllocConsole();
 		freopen("CONOUT$", "w", stdout);
 #endif	
-		if(!url_request_context_getter)
-			url_request_context_getter = new content::KaminoURLRequestContextGetter(
-				content::BrowserThread::UnsafeGetMessageLoopForThread(content::BrowserThread::IO),
-				content::BrowserThread::UnsafeGetMessageLoopForThread(content::BrowserThread::FILE));
-		file_util::ReadFileToString(FilePath(L"..\\state.xml"), &current_state_xml); 
+		if(!url_request_context_getter){
+			url_request_context_getter = main_owner->browser_context()->GetRequestContext();		
+		}
+		base::ReadFileToString(base::FilePath(L"..\\state.xml"), &current_state_xml); 
 		KaminoUpdateStatus *status = new KaminoUpdateStatus(url_request_context_getter);
 		status->Execute(base::Bind(&KaminoUpdateProcess::InitialExecution, base::Unretained(this)));
 		UI_LOG(0, "Executing MessageLoop in Update Process")

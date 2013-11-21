@@ -5,7 +5,7 @@
 #include "KaminoWebContentViewDelegate.h"
 #include "KaminoGlobal.h"
 #include "content\public\browser\navigation_entry.h"
-#include "third_party\WebKit\Source\WebKit\chromium\public\WebContextMenuData.h"
+//#include "third_party\WebKit\Source\WebKit\chromium\public\WebContextMenuData.h"
 #include "content\public\browser\web_contents_view.h"
 #include "content\public\browser\web_contents_view_delegate.h"
 #include "content\public\browser\render_view_host.h"
@@ -162,15 +162,15 @@ void KaminoWebContentViewDelegate::MenuItemSelected(int selection){
 		break;
 	case KaminoContextMenuItemBackId:
 		web_content->GetController().GoToOffset(-1);
-		web_content->Focus();
+		web_content->GetView()->Focus();
 		break;
 	case KaminoContextMenuItemForwardId:
 		web_content->GetController().GoToOffset(1);
-		web_content->Focus();
+		web_content->GetView()->Focus();
 		break;
 	case KaminoContextMenuItemReloadId:
 		web_content->GetController().Reload(false);
-		web_content->Focus();
+		web_content->GetView()->Focus();
 		break;
 	case KaminoContentMenuItemLikesId:
 		web_content->GetController().LoadURL(GURL(KaminoGlobal::g_ilike_url), content::Referrer(), 
@@ -197,12 +197,26 @@ void KaminoWebContentViewDelegate::MenuItemSelected(int selection){
 			web_content->GetRenderViewHost()->ExecuteJavascriptInWebFrame(string16(), js_code);
 			break;
 		}
+	case KaminoContextMenuItemIncognitoId:
+		{
+			STARTUPINFO info = { sizeof(info) };
+			PROCESS_INFORMATION processInfo;
+			CreateProcess(KaminoGlobal::g_executable_name, L" -incognito", NULL, NULL, TRUE, 0, NULL, NULL, &info, &processInfo);
+		}
+		break;	
+	case KaminoContextMenuItemNewWindowId:
+		{
+			STARTUPINFO info = { sizeof(info) };
+			PROCESS_INFORMATION processInfo;
+			CreateProcess(KaminoGlobal::g_executable_name, L"", NULL, NULL, TRUE, 0, NULL, NULL, &info, &processInfo);																								  
+		}
+		break;
 	}
 }
 
-void KaminoWebContentViewDelegate::ShowContextMenu(const ContextMenuParams& params, ContextMenuSourceType type){
+void KaminoWebContentViewDelegate::ShowContextMenu(const ContextMenuParams& params){
 	params_ = params;
-	MessageLoop::ScopedNestableTaskAllower allow(MessageLoop::current());
+	base::MessageLoop::ScopedNestableTaskAllower allow(base::MessageLoop::current());
 	bool has_link = !params_.unfiltered_link_url.is_empty();
 	bool has_selection = !params_.selection_text.empty();
 	HMENU menu = CreateMenu();
@@ -224,8 +238,11 @@ void KaminoWebContentViewDelegate::ShowContextMenu(const ContextMenuParams& para
 			if((params_.edit_flags & WebKit::WebContextMenuData::CanPaste) != 0)
 				MakeContextMenuItem(sub_menu, index++, L"Paste", KaminoContextMenuItemPasteId, true);
 			else
-				if(web_content->GetURL().SchemeIsFile())
+				if(web_content->GetURL().SchemeIsFile()){
 					MakeContextMenuItem(sub_menu, index++, L"Like's", KaminoContentMenuItemLikesId, true);
+					MakeContextMenuItem(sub_menu, index++, L"Incognito", KaminoContextMenuItemIncognitoId, true);
+					MakeContextMenuItem(sub_menu, index++, L"New Window", KaminoContextMenuItemNewWindowId, true);
+				}
 				else					
 					MakeContextMenuItem(sub_menu, index++, L"Like", KaminoContentMenuItemLikeId, true);
 			MakeContextMenuItem(sub_menu, index++, L"Back", KaminoContextMenuItemBackId, web_content->GetController().CanGoBack());
@@ -237,7 +254,7 @@ void KaminoWebContentViewDelegate::ShowContextMenu(const ContextMenuParams& para
 	MakeContextMenuItem(sub_menu, index++, L"Recently Closed", KaminoContextMenuItemRecentlyClosedId, true);
 	gfx::Point screen_point(params.x, params.y);
 	POINT point = screen_point.ToPOINT();
-	ClientToScreen(web_content->GetNativeView(), &point);
+	ClientToScreen(web_content->GetView()->GetNativeView(), &point);
 	int selection = TrackPopupMenu(sub_menu, TPM_LEFTALIGN | TPM_RIGHTBUTTON | TPM_RETURNCMD, point.x, point.y, 0, 
 												web_content->GetView()->GetContentNativeView(), NULL);
 	MenuItemSelected(selection);

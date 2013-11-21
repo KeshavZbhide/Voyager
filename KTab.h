@@ -38,7 +38,7 @@ class KaminoFindWindow;
 //The main tab manager, in charge of various tabs, and the main tab_window.
 class KTabManager{
 public:
-	KTabManager();
+	KTabManager(BasicUIMain *main_parent);
 	~KTabManager();
 	bool Initialize(HWND);
 	bool AddTab(GURL *);
@@ -78,8 +78,8 @@ public:
 	HWND tab_window;
 
 	RECT region;
+	BasicUIMain *main_parent_UI;
 	HWND core_parent;
-	scoped_ptr<content::KaminoBrowserContext> browser_context;
 	static LRESULT CALLBACK TabManagerWndProc(HWND, UINT, WPARAM, LPARAM);
 	static LRESULT CALLBACK TabManagerWndProcStub(HWND, UINT, WPARAM, LPARAM, KTabManager *myself);
 	int GetTabXSumLimit();
@@ -126,15 +126,19 @@ public:
 	HRESULT BuildTextGeometry();
 
 	//Favicon Download Callback;
-	void KTabFaviconDownloadCallBack(int id, const GURL& url, bool errors, int size,
-                              const std::vector<SkBitmap>& bitmaps);
-
+	void KTabFaviconDownloadCallBack(int id, int http_status_code, const GURL& url, 
+		const std::vector<SkBitmap>& bitmaps, const std::vector<gfx::Size>& size);
 
 	//WebContentDelegate Methods
 	virtual void LoadingStateChanged(content::WebContents* source) OVERRIDE;
 	virtual content::WebContents* OpenURLFromTab(content::WebContents* source, const content::OpenURLParams& params) OVERRIDE;
-	virtual void WebContentsCreated(content::WebContents* source_contents, int64 source_frame_id, const GURL& target_url, 
-									content::WebContents* new_contents) OVERRIDE;
+
+	virtual void WebContentsCreated(content::WebContents* source_contents,
+                                  int64 source_frame_id,
+                                  const string16& frame_name,
+                                  const GURL& target_url,
+                                 content::WebContents* new_contents) OVERRIDE;
+
 	virtual void DidNavigateMainFramePostCommit(content::WebContents* source) OVERRIDE;
 	virtual void HandleKeyboardEvent(content::WebContents* source,
                                    const content::NativeWebKeyboardEvent& event) OVERRIDE;

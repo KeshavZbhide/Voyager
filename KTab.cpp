@@ -10,11 +10,13 @@
 #include <stdlib.h>
 #include "KaminoHistoryModule.h"
 #include "KaminoUpdateStatus.h"
+#include "KaminoRenderViewHost.h"
 #include "content\public\browser\browser_thread.h"
 #include "content\public\browser\notification_types.h"
 #include "content\public\browser\notification_source.h"
 #include "content\public\browser\native_web_keyboard_event.h"
 #include "content\public\browser\render_view_host.h"
+#include "content\public\browser\web_contents_view.h"
 #include "net\url_request\url_fetcher.h"
 #include "net\url_request\url_fetcher_delegate.h"
 #include "third_party\skia\include\core\SkBitmap.h"
@@ -187,7 +189,10 @@ content::WebContents* KTab::OpenURLFromTab(content::WebContents* source, const c
 	return source;
 }
 
-void KTab::WebContentsCreated(content::WebContents* source_contents, int64 source_frame_id, const GURL& target_url,
+void KTab::WebContentsCreated(content::WebContents* source_contents,
+								int64 source_frame_id,
+								const string16& frame_name,
+                                const GURL& target_url,
 								content::WebContents* new_contents){
 	manager->AddTabNextTo(this, new_contents);
 }
@@ -300,9 +305,9 @@ void KTab::HandleKeyboardEvent(content::WebContents* source,
 		}
 }
 
-void KTab::KTabFaviconDownloadCallBack(int id, const GURL& url, bool errors, int size, 
-	const std::vector<SkBitmap>& bitmaps){
-	if(!errors){
+void KTab::KTabFaviconDownloadCallBack(int id, int http_status_code, const GURL& url, 
+	const std::vector<SkBitmap>& bitmaps, const std::vector<gfx::Size>& size){
+	if(http_status_code == 200){
 		if(bitmaps.size() > 0){
 			int size = 0;
 			int index = 0;
@@ -340,25 +345,25 @@ void KTab::Observe(int type, const content::NotificationSource& source, const co
 		if(favicon.Get())
 			favicon.Clean();
 		if(web_content->GetURL().SchemeIsFile())
-			web_content->DownloadFavicon(GURL("https://s3-us-west-2.amazonaws.com/www.voyjor.com/LogoPractice.ico"), 0, 
+			web_content->DownloadImage(GURL("https://s3-us-west-2.amazonaws.com/www.voyjor.com/LogoPractice.ico"), true, 1024, 
 				base::Bind(&KTab::KTabFaviconDownloadCallBack, base::Unretained(this)));
 		else
-			web_content->DownloadFavicon(GURL("http://"+web_content->GetURL().host()+"/favicon.ico"), 0, 
+			web_content->DownloadImage(GURL("http://"+web_content->GetURL().host()+"/favicon.ico"), true, 1024, 
 				base::Bind(&KTab::KTabFaviconDownloadCallBack, base::Unretained(this)));
 	}      
 }
 
 
 //-----------------------------------------------KTabManager--------------------------------------------------------
-KTabManager::KTabManager(){
+KTabManager::KTabManager(BasicUIMain *main_parent){
 	main = NULL;
+	main_parent_UI = main_parent;
 	current = NULL;
 	back_button = NULL;
 	add_tab_button = NULL;
 	min_max_close_button = NULL;
 	find_window = NULL;
 	is_initialized = false;
-	browser_context.reset(new content::KaminoBrowserContext());
 	tool_tip = NULL;
 	tab_window = NULL;
 	tab_x_sum_limit = 0;
@@ -368,7 +373,6 @@ KTabManager::KTabManager(){
 KTabManager::~KTabManager(){
 	is_initialized = false;
 	CloseAllTabs();
-	browser_context.reset(NULL);
 	if(find_window)
 		delete find_window;
 	if(back_button != NULL)
@@ -405,8 +409,8 @@ bool KTabManager::Initialize(HWND parent){
 	wnd.lpszMenuName = NULL;
 	wnd.style = (CS_VREDRAW | CS_HREDRAW);
 	RegisterClassEx(&wnd);
-	tab_window = CreateWindowEx(NULL, wnd.lpszClassName, L"KTabManagerWorkSpace", WS_CHILD | WS_CLIPCHILDREN, region.left, region.top, region.right, TAB_CAPTION_WIDTH/*37*/, 
-		parent, NULL, wnd.hInstance, this);
+	tab_window = CreateWindowEx(NULL, wnd.lpszClassName, L"KTabManagerWorkSpace", WS_CHILD | WS_CLIPCHILDREN, region.left, 
+		region.top, region.right, TAB_CAPTION_WIDTH, parent, NULL, wnd.hInstance, this);
 	if(SUCCEEDED(InitDeviceIndependantResource())){
 		if(tab_window == NULL){
 			return false;
@@ -617,14 +621,14 @@ void KTabManager::DestroyDeiviceDependantResource(){
 }
 
 bool KTabManager::AddTab(GURL *url){
-	content::WebContents::CreateParams param(browser_context.get());
+	content::WebContents::CreateParams param(main_parent_UI->GetBrowserContext());
 	AddTab(content::WebContents::Create(param));
 	GoToUrl(url);
 	return true;
 }
 
 bool KTabManager::AddTab(char *url){
-	content::WebContents::CreateParams param(browser_context.get());
+	content::WebContents::CreateParams param(main_parent_UI->GetBrowserContext());
 	AddTab(content::WebContents::Create(param));
 	GoToUrl(url);
 	return true;
@@ -651,6 +655,7 @@ bool KTabManager::AddTab(content::WebContents *new_content){
 		should_update->Execute(base::Bind(UpdateProcessExecutor));
 		checked_for_update = true;
 	}
+	new content::KaminoRenderViewHostObserver(new_content->GetRenderViewHost());
 	KTab* tab = new KTab();
 	tab->top_pos = 40;
 	tab->manager = this;
@@ -684,13 +689,14 @@ bool KTabManager::AddTab(content::WebContents *new_content){
 	}
 	tab_x_sum_limit += TAB_WIDTH; //112 is tab width;
 	tab->web_content->SetDelegate(tab);
-	SetParent(tab->web_content->GetNativeView(), core_parent);
+	SetParent(tab->web_content->GetView()->GetNativeView(), core_parent);
 	SwitchTo(tab);
 	return true;
 }
 
 
-bool KTabManager::AddTabNextTo(KTab *prev_tab, content::WebContents *new_content){	
+bool KTabManager::AddTabNextTo(KTab *prev_tab, content::WebContents *new_content){
+	new content::KaminoRenderViewHostObserver(new_content->GetRenderViewHost());
 	KTab* tab = new KTab();
 	tab->top_pos = 40;
 	tab->manager = this;
@@ -721,7 +727,7 @@ bool KTabManager::AddTabNextTo(KTab *prev_tab, content::WebContents *new_content
 	}
 	tab_x_sum_limit += TAB_WIDTH; //112 is tab width;
 	tab->web_content->SetDelegate(tab);
-	SetParent(tab->web_content->GetNativeView(), core_parent);
+	SetParent(tab->web_content->GetView()->GetNativeView(), core_parent);
 	SwitchTo(tab);
 	return true;
 }
@@ -791,7 +797,7 @@ void KTabManager::SwitchTo(KTab *tab){
 	if((find_window != NULL) && find_window->IsVisible())
 		find_window->Hide();
 	if((current != NULL) && (current->web_content.get())){
-		ShowWindow(current->web_content->GetNativeView(), SW_HIDE);
+		ShowWindow(current->web_content->GetView()->GetNativeView(), SW_HIDE);
 		current->web_content->WasHidden();
 		current->is_window_active = false;
 	}
@@ -812,8 +818,8 @@ void KTabManager::RecivedHwndMessage(UINT msg, WPARAM wParam, LPARAM lParam){
 			//Currently we only have one, size so calling move window, would be a waste.
 			//XX//let the The Tab Window Handle the resizing of current's web_content window;
 			if(current){
-				SetWindowPos(current->web_content->GetNativeView(), NULL, 1, TAB_CAPTION_WIDTH, region.right-2, region.bottom - TAB_CAPTION_WIDTH, SWP_NOREDRAW);
-				current->web_content->Focus();
+				SetWindowPos(current->web_content->GetView()->GetNativeView(), NULL, 1, TAB_CAPTION_WIDTH, region.right-2, region.bottom - TAB_CAPTION_WIDTH, SWP_NOREDRAW);
+				current->web_content->GetView()->Focus();
 			}
 			break;
 		}
@@ -1012,7 +1018,7 @@ LRESULT CALLBACK KTabManager::TabManagerWndProc(HWND hWnd, UINT msg, WPARAM wPar
 				temp->draged_left_pos = -1;
 			}
 			if(myself->current)
-				myself->current->web_content->Focus();
+				myself->current->web_content->GetView()->Focus();
 			myself->Render();
 			return 0;
 		}
@@ -1073,7 +1079,7 @@ void KTabManager::GoBack(){
 	if((current != NULL) && (current->web_content.get()))
 		if(current->web_content->GetController().CanGoBack()){
 				current->web_content->GetController().GoBack();
-				current->web_content->Focus();
+				current->web_content->GetView()->Focus();
 		}
 }
 //GoForward for current's web_content.
@@ -1081,14 +1087,14 @@ void KTabManager::GoForward(){
 	if((current != NULL) && (current->web_content.get()))
 		if(current->web_content->GetController().CanGoForward()){
 			current->web_content->GetController().GoForward();
-			current->web_content->Focus();
+			current->web_content->GetView()->Focus();
 		}
 }
 //FOCUS
 void KTabManager::Focus(){
 	if(current != NULL){
-		current->web_content->Focus();
-		SetFocus(current->web_content->GetNativeView());
+		current->web_content->GetView()->Focus();
+		SetFocus(current->web_content->GetView()->GetNativeView());
 	}
 }
 
@@ -1097,7 +1103,7 @@ void KTabManager::GoToUrl(char *url){
 	if((current != NULL) && (current->web_content.get())){
 		current->web_content->GetController().LoadURL(GURL(std::string(url)), content::Referrer(), 
 			content::PageTransitionFromInt(content::PAGE_TRANSITION_TYPED | content::PAGE_TRANSITION_FROM_ADDRESS_BAR), std::string());
-		current->web_content->Focus();
+		current->web_content->GetView()->Focus();
 	}
 }
 
@@ -1111,7 +1117,7 @@ void KTabManager::GoToUrl(GURL *url){
 void KTabManager::Reload(){
 	if((current != NULL) && (current->web_content.get())){
 		current->web_content->GetController().Reload(false);
-		current->web_content->Focus();
+		current->web_content->GetView()->Focus();
 	}	
 }
 int KTabManager::GetTabXSumLimit(){
@@ -1119,20 +1125,19 @@ int KTabManager::GetTabXSumLimit(){
 }
 
 void KTabManager::Render(){
-	UI_LOG(0, "Running Rendering Loop")
 	if((current != NULL) && (current->web_content.get())){
 		RECT rc;
 		if(!current->is_window_active){
-			ShowWindow(current->web_content->GetNativeView(), SW_SHOW);
+			ShowWindow(current->web_content->GetView()->GetNativeView(), SW_SHOW);
 			current->is_window_active = true;
 			current->web_content->WasShown();
 		}
-		GetWindowRect(current->web_content->GetNativeView(), &rc);
-		if((rc.top != TAB_CAPTION_WIDTH) || (rc.left != 1) || ((rc.right - rc.left) != ((region.right - region.left)-2)) ||
-			(((rc.bottom - rc.top)+TAB_CAPTION_WIDTH+1) != (region.bottom - region.top))){
-			MoveWindow(current->web_content->GetNativeView(), 1, TAB_CAPTION_WIDTH , region.right-2, region.bottom - TAB_CAPTION_WIDTH - 1, TRUE);
+		GetWindowRect(current->web_content->GetView()->GetNativeView(), &rc);
+		if((rc.top != TAB_CAPTION_WIDTH) || (rc.left != 0) || ((rc.right - rc.left) != ((region.right - region.left))) ||
+			(((rc.bottom - rc.top)+TAB_CAPTION_WIDTH) != (region.bottom - region.top))){
+			MoveWindow(current->web_content->GetView()->GetNativeView(), 0, TAB_CAPTION_WIDTH , region.right, region.bottom - TAB_CAPTION_WIDTH, TRUE);
 		}
-		current->web_content->Focus();
+		current->web_content->GetView()->Focus();
 	}
 	if(SUCCEEDED(InitDeviceDependantResource())){
 		timer.Start();
@@ -1179,10 +1184,10 @@ void KTabManager::Render(){
 			); 
 			direct2d_render_target.Get()->DrawLine(D2D1::Point2F(0.0f, static_cast<FLOAT>(TAB_CAPTION_WIDTH)), D2D1::Point2F(static_cast<FLOAT>(region.right), 
 				static_cast<FLOAT>(TAB_CAPTION_WIDTH)), tab_border_line_brush3.Get(), 2.0f);
-			direct2d_render_target.Get()->DrawLine(D2D1::Point2F(0.0f, 0.0f), D2D1::Point2F(0.0f, static_cast<FLOAT>(TAB_CAPTION_WIDTH)), 
-				tab_border_line_brush2.Get(), 2.0f);
-			direct2d_render_target.Get()->DrawLine(D2D1::Point2F(static_cast<FLOAT>(region.right), 0.0f), D2D1::Point2F(static_cast<FLOAT>(region.right), static_cast<FLOAT>(TAB_CAPTION_WIDTH)), 
-				tab_border_line_brush2.Get(), 2.0f);
+			//direct2d_render_target.Get()->DrawLine(D2D1::Point2F(0.0f, 0.0f), D2D1::Point2F(0.0f, static_cast<FLOAT>(TAB_CAPTION_WIDTH)), 
+				//tab_border_line_brush2.Get(), 2.0f);
+			//direct2d_render_target.Get()->DrawLine(D2D1::Point2F(static_cast<FLOAT>(region.right), 0.0f), D2D1::Point2F(static_cast<FLOAT>(region.right), static_cast<FLOAT>(TAB_CAPTION_WIDTH)), 
+				//tab_border_line_brush2.Get(), 2.0f);
 			HRESULT hr = direct2d_render_target.Get()->EndDraw();
 			if(hr == D2DERR_RECREATE_TARGET || FAILED(hr)){
 				DestroyDeiviceDependantResource();

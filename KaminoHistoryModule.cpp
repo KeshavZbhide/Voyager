@@ -51,7 +51,7 @@ void KaminoHistoryModule::PreInitialize(){
 	KaminoHistoryStack::file_path = (wchar_t *)malloc((len + wcslen(file_name))*sizeof(wchar_t));
 	GetCurrentDirectory(len, KaminoHistoryStack::file_path);
 	wcscpy(wcsrchr(KaminoHistoryStack::file_path, '\\')+1, file_name);
-	FilePath path(KaminoHistoryStack::file_path);
+	base::FilePath path(KaminoHistoryStack::file_path);
 	base::PlatformFile file = base::CreatePlatformFile(path, base::PLATFORM_FILE_OPEN_ALWAYS | base::PLATFORM_FILE_WRITE | base::PLATFORM_FILE_READ,
 		NULL, NULL);
 	base::PlatformFileInfo info;
@@ -94,14 +94,14 @@ void KaminoHistoryModule::Flush(){
 	if((KaminoHistoryStack::start == NULL) && (KaminoHistoryStack::file_content == NULL))
 		return;
 	if((KaminoHistoryStack::start == NULL) && (KaminoHistoryStack::file_content != NULL)){
-		FilePath path(KaminoHistoryStack::file_path);
+		base::FilePath path(KaminoHistoryStack::file_path);
 		base::PlatformFile file = base::CreatePlatformFile(path, base::PLATFORM_FILE_OPEN_ALWAYS | base::PLATFORM_FILE_WRITE, NULL, NULL);
 		base::TruncatePlatformFile(file, KaminoHistoryStack::file_size);
 		base::WritePlatformFile(file, 0, KaminoHistoryStack::file_content, KaminoHistoryStack::file_size);
 		base::ClosePlatformFile(file);
 		return;
 	}
-	FilePath path(KaminoHistoryStack::file_path);
+	base::FilePath path(KaminoHistoryStack::file_path);
 	base::PlatformFile file = base::CreatePlatformFile(path, base::PLATFORM_FILE_OPEN_ALWAYS | base::PLATFORM_FILE_WRITE, NULL, NULL);
 	base::TruncatePlatformFile(file, 0);
 	int position = 0;

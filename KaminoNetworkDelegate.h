@@ -6,6 +6,7 @@
 #define KAMINO_NETWORK_DELEGATE
 
 #include "base/basictypes.h"
+#include "base/files/file_path.h"
 #include "base/compiler_specific.h"
 #include "net/base/network_delegate.h"
 
@@ -34,7 +35,7 @@ private:
 												net::AuthCredentials* credentials) OVERRIDE;
 	virtual bool OnCanGetCookies(const net::URLRequest& request, const net::CookieList& cookie_list) OVERRIDE;
 	virtual bool OnCanSetCookie(const net::URLRequest& request, const std::string& cookie_line, net::CookieOptions* options) OVERRIDE;
-	virtual bool OnCanAccessFile(const net::URLRequest& request, const FilePath& path) const OVERRIDE;
+	virtual bool OnCanAccessFile(const net::URLRequest& request, const base::FilePath& path) const OVERRIDE;
 	virtual bool OnCanThrottleRequest(const net::URLRequest& request) const OVERRIDE;
 	virtual int OnBeforeSocketStreamConnect(net::SocketStream* stream, const net::CompletionCallback& callback) OVERRIDE;
 	virtual void OnRequestWaitStateChange(const net::URLRequest& request, RequestWaitState state) OVERRIDE;

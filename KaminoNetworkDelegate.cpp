@@ -37,8 +37,9 @@ namespace content{
 	}
 	void KaminoNetworkDelegate::OnPACScriptError(int line_number, const string16& error){
 	}
-	KaminoNetworkDelegate::AuthRequiredResponse KaminoNetworkDelegate::OnAuthRequired(	net::URLRequest* request, const net::AuthChallengeInfo& auth_info, const AuthCallback& callback, 
-																net::AuthCredentials* credentials){
+	KaminoNetworkDelegate::AuthRequiredResponse KaminoNetworkDelegate::OnAuthRequired(net::URLRequest* request, 
+							const net::AuthChallengeInfo& auth_info, const AuthCallback& callback, 
+							net::AuthCredentials* credentials){
 		return AUTH_REQUIRED_RESPONSE_NO_ACTION;
 	}
 	bool KaminoNetworkDelegate::OnCanGetCookies(const net::URLRequest& request, const net::CookieList& cookie_list){
@@ -47,7 +48,7 @@ namespace content{
 	bool KaminoNetworkDelegate::OnCanSetCookie(const net::URLRequest& request, const std::string& cookie_line, net::CookieOptions* options){
 		return true;
 	}
-	bool KaminoNetworkDelegate::OnCanAccessFile(const net::URLRequest& request, const FilePath& path) const {
+	bool KaminoNetworkDelegate::OnCanAccessFile(const net::URLRequest& request, const base::FilePath& path) const {
 		return true;
 	}
 	bool KaminoNetworkDelegate::OnCanThrottleRequest(const net::URLRequest& request) const {

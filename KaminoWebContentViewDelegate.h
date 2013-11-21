@@ -32,7 +32,9 @@ public:
 		KaminoContextMenuItemRecentlyClosedId,
 		KaminoContentMenuItemLikeId,
 		KaminoContentMenuItemLikesId,
-		KaminoContextMenuItemCopyPageURLId
+		KaminoContextMenuItemCopyPageURLId,
+		KaminoContextMenuItemIncognitoId,
+		KaminoContextMenuItemNewWindowId
 	};
 
 	KaminoWebContentViewDelegate(WebContents *content);
@@ -40,7 +42,7 @@ public:
 	WebDragDestDelegate* GetDragDestDelegate();
 	void MakeContextMenuItem(HMENU menu, int menu_index, LPTSTR text, UINT id, bool enabled);
 	void MenuItemSelected(int selection);
-	void ShowContextMenu(const ContextMenuParams& params, ContextMenuSourceType type) OVERRIDE;
+	void ShowContextMenu(const ContextMenuParams& params) OVERRIDE;
 	void StoreFocus() OVERRIDE;
 	void RestoreFocus() OVERRIDE;
 	bool Focus() OVERRIDE;

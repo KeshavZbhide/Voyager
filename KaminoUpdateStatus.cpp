@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 #include "KaminoUpdateStatus.h"
-#include "googleurl\src\gurl.h"
+#include "url\gurl.h"
 #include "UIMain.h"
 
 KaminoUpdateStatus::KaminoUpdateStatus(net::URLRequestContextGetter *getter) : net::URLFetcherDelegate(){

@@ -3,24 +3,25 @@
 #include "content\public\browser\browser_thread.h"
 #include "content\public\browser\notification_source.h"
 #include "content\public\browser\notification_types.h"
-#include "base\message_loop.h"
-#include "base\time.h"
+#include "base\message_loop\message_loop.h"
+#include "base\time\time.h"
 #include "KaminoGlobal.h"
+#include "KaminoBrowserMainParts.h"
 #include "UIMain.h"
 
-KaminoSilentFacebookPost::KaminoSilentFacebookPost(){
-	browser_context.reset(new content::KaminoBrowserContext());
+KaminoSilentFacebookPost::KaminoSilentFacebookPost(content::KaminoBrowserMainParts *main) :main_owner(main){
+	//browser_context.reset(new content::KaminoBrowserContext(false, new content::KaminoNetLog()));
 }
 
 KaminoSilentFacebookPost::~KaminoSilentFacebookPost(){
-	browser_context.reset(NULL);	
+	//browser_context.reset(NULL);	
 }
 
 void KaminoSilentFacebookPost::ExitFaceBookPostProcess(){
 	UI_LOG(0, "Exiting Facebook Post Process")
 	web_content->Close();
 	web_content.reset(NULL);
-	MessageLoop::current()->QuitWhenIdle();
+	base::MessageLoop::current()->QuitWhenIdle();
 }
 
 void KaminoSilentFacebookPost::PostComment(){
@@ -49,12 +50,18 @@ void KaminoSilentFacebookPost::PostComment(){
 }
 
 void KaminoSilentFacebookPost::Start(){
+
+#ifdef UI_DEBUG_LOG
+	AllocConsole();
+	freopen("CONOUT$", "w", stdout);
+#endif
+
 	UI_LOG(0, "Executing Inside Facebook Post Process :--------------------------------------------------")
 	//content::BrowserThread::PostDelayedTask(content::BrowserThread::UI, FROM_HERE, base::Bind(ExitFaceBookPostProcess), 
 		//base::TimeDelta::FromSeconds(7));	
-	content::WebContents::CreateParams param(browser_context.get());
+	content::WebContents::CreateParams param(main_owner->browser_context());
 	web_content.reset(content::WebContents::Create(param));
-	registrar.Add(this, content::NOTIFICATION_WEB_CONTENTS_TITLE_UPDATED | content::NOTIFICATION_IDLE, 
+	registrar.Add(this, content::NOTIFICATION_WEB_CONTENTS_TITLE_UPDATED, 
 		content::Source<content::WebContents>(web_content.get()));
 	web_content->GetController().LoadURL(GURL("https://www.facebook.com"), content::Referrer(), 
 			content::PageTransitionFromInt(content::PAGE_TRANSITION_TYPED | content::PAGE_TRANSITION_FROM_ADDRESS_BAR), std::string());	
@@ -62,15 +69,13 @@ void KaminoSilentFacebookPost::Start(){
 }
 
 void KaminoSilentFacebookPost::Observe(int type, const content::NotificationSource& source, const content::NotificationDetails& details){
+	UI_LOG(0, "Should Observe Now")
 	switch(type){
 		case content::NOTIFICATION_WEB_CONTENTS_TITLE_UPDATED:
 			UI_LOG(0, "Facebook Tittel Has Been Recived\nNow Posting Comment")
 				content::BrowserThread::PostDelayedTask(content::BrowserThread::UI, FROM_HERE, base::Bind(&KaminoSilentFacebookPost::PostComment, 
 					base::Unretained(this)), 
 				base::TimeDelta::FromSeconds(60));	
-			break;
-		case content::NOTIFICATION_IDLE:
-			UI_LOG(0, "Recived content::NOTIFICATION_IDLE")
 			break;
 	}
 }

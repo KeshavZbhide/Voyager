@@ -7,16 +7,18 @@
 
 #include "KaminoBrowserContext.h"
 #include <windows.h>
-#include "base\file_path.h"
-#include "base\message_loop.h"
+#include "base\files\file_path.h"
+#include "base\message_loop\message_loop.h"
 #include "third_party\libxml\chromium\libxml_utils.h"
+#include "KaminoBrowserMainParts.h"
 
 
 namespace KaminoUpdate{
 
+class content::KaminoBrowserMainParts;
 class KaminoUpdateProcess{
 public:
-	KaminoUpdateProcess();
+	KaminoUpdateProcess(content::KaminoBrowserMainParts *main_parts);
 	~KaminoUpdateProcess();
 	void Start();
 	void InitialExecution(std::string version);
@@ -38,12 +40,13 @@ public:
 	static void BuildAllShortCuts(std::string &target);
 	
 	bool ShouldBringFile(std::string&, std::string&);
-	void BringFile(std::string &file, std::string &url, base::Callback<void(FilePath)> callback);
+	void BringFile(std::string &file, std::string &url, base::Callback<void(base::FilePath)> callback);
 	WNDCLASSEX wnd_cls;
 	HWND hWnd;
 	scoped_refptr<net::URLRequestContextGetter> url_request_context_getter;
 	XmlReader reader_current_state;
 	std::string current_state_xml;
+	content::KaminoBrowserMainParts *main_owner;
 };
 
 }

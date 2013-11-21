@@ -67,22 +67,22 @@ void KaminoRenderViewHostObserver::LogFromRenderer(std::string msg){
 void KaminoRenderViewHostObserver::NewSymLinkFromRenderer(std::string key, std::string link){
 	std::string js_content;
 	UI_LOG(0, "Executin Inside >>> NewSymLinkFromRenderer");
-	if(file_util::PathExists(FilePath(L"..\\KaminoResource\\simlinks.js"))){
-		file_util::ReadFileToString(FilePath(L"..\\KaminoResource\\simlinks.js"), &js_content);
+	if(base::PathExists(base::FilePath(L"..\\KaminoResource\\simlinks.js"))){
+		base::ReadFileToString(base::FilePath(L"..\\KaminoResource\\simlinks.js"), &js_content);
 		size_t index = js_content.find(key);
 		if(index == -1 || index == js_content.npos){
 			js_content.resize(js_content.length() - 2);
 			js_content += key + ":" + link + ",};";
-			file_util::WriteFile(FilePath(L"..\\KaminoResource\\simlinks.js"), js_content.c_str(), js_content.length());
+			file_util::WriteFile(base::FilePath(L"..\\KaminoResource\\simlinks.js"), js_content.c_str(), js_content.length());
 		}
 		else{
-			file_util::Delete(FilePath(L"..\\KaminoResource\\simlinks.js"), false);
+			base::DeleteFile(base::FilePath(L"..\\KaminoResource\\simlinks.js"), false);
 			index += key.length() + 1;
 			std::string rest = js_content.substr(index, js_content.length());
 			rest = rest.substr(rest.find(","), rest.length());
 			js_content.resize(index);
 			std::string final = js_content.append(link).append(rest);
-			file_util::WriteFile(FilePath(L"..\\KaminoResource\\simlinks.js"), js_content.c_str(), js_content.length());			
+			file_util::WriteFile(base::FilePath(L"..\\KaminoResource\\simlinks.js"), js_content.c_str(), js_content.length());			
 		}
 	}	
 }
@@ -92,13 +92,13 @@ void KaminoRenderViewHostObserver::ILikeFromRenderer(std::string content){
 	UI_LOG(0, "Recived I LIKE from Renderer :: %s", content.c_str())
 	char *str = "<html><body><head><link href='styler.css' rel='stylesheet' type='text/css'></head>";
 	char *str2 = "</body></html>";
-	if(!file_util::PathExists(FilePath(L"..\\KaminoResource\\IlikeHtm.html"))){
-		file_util::WriteFile(FilePath(L"..\\KaminoResource\\IlikeHtm.html"), str, strlen(str));
-		file_util::AppendToFile(FilePath(L"..\\KaminoResource\\IlikeHtm.html"), content.c_str(), content.length());
-		file_util::AppendToFile(FilePath(L"..\\KaminoResource\\IlikeHtm.html"), str2, strlen(str2));
+	if(!base::PathExists(base::FilePath(L"..\\KaminoResource\\IlikeHtm.html"))){
+		file_util::WriteFile(base::FilePath(L"..\\KaminoResource\\IlikeHtm.html"), str, strlen(str));
+		file_util::AppendToFile(base::FilePath(L"..\\KaminoResource\\IlikeHtm.html"), content.c_str(), content.length());
+		file_util::AppendToFile(base::FilePath(L"..\\KaminoResource\\IlikeHtm.html"), str2, strlen(str2));
 	}
 	else{
-		FilePath path = FilePath(L"..\\KaminoResource\\IlikeHtm.html");
+		base::FilePath path = base::FilePath(L"..\\KaminoResource\\IlikeHtm.html");
 		char *present_content = NULL;
 		int64 content_size;
 		file_util::GetFileSize(path, &content_size);
